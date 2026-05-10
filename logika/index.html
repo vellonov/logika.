@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Minimal Apple Store</title>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
+}
+
+body{
+  background:#0b0b0b;
+  color:white;
+  overflow-x:hidden;
+}
+
+/* ===== BACKGROUND PARTICLES ===== */
+.particle{
+  position:fixed;
+  top:-10px;
+  color:rgba(255,255,255,0.8);
+  pointer-events:none;
+  animation:fall linear infinite;
+  z-index:-1;
+}
+
+@keyframes fall{
+  to{transform:translateY(110vh);}
+}
+
+/* HEADER */
+header{
+  position:fixed;
+  top:0;
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:15px 25px;
+  backdrop-filter:blur(20px);
+  background:rgba(0,0,0,0.6);
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  z-index:1000;
+}
+
+.logo{font-weight:600;}
+
+input{
+  padding:8px 12px;
+  border-radius:10px;
+  border:1px solid #444;
+  background:transparent;
+  color:white;
+  box-sizing:border-box;
+}
+
+/* HERO */
+.hero{
+  height:35vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+}
+
+.hero h1{font-size:45px;}
+
+/* CATEGORIES */
+.categories{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  padding:15px;
+  flex-wrap:wrap;
+}
+
+.cat{
+  padding:6px 12px;
+  border:1px solid #333;
+  border-radius:999px;
+  cursor:pointer;
+}
+
+/* PRODUCTS */
+.products{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:15px;
+  padding:25px;
+}
+
+.card{
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:15px;
+  overflow:hidden;
+}
+
+.card img{
+  width:100%;
+  height:140px;
+  object-fit:cover;
+}
+
+.card-content{
+  padding:10px;
+}
+
+.price{opacity:0.7; margin:5px 0;}
+
+.btn{
+  width:100%;
+  padding:8px;
+  border:none;
+  background:white;
+  color:black;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+/* CART */
+.cart{
+  position:fixed;
+  right:-360px;
+  top:0;
+  width:320px;
+  height:100vh;
+  background:#0a0a0a;
+  border-left:1px solid #222;
+  padding:15px;
+  transition:0.4s;
+  display:flex;
+  flex-direction:column;
+  z-index:2000;
+}
+
+.cart.active{right:0;}
+
+#cartItems{
+  flex:1;
+  overflow-y:auto;
+  margin-top:10px;
+}
+
+.item{
+  display:flex;
+  justify-content:space-between;
+  margin:8px 0;
+}
+
+.cart-footer{
+  border-top:1px solid #222;
+  padding-top:10px;
+}
+
+/* CHECKOUT */
+#checkout{
+  padding:70px 25px;
+  background:#0a0a0a;
+  border-top:1px solid #222;
+  margin-top:40px;
+}
+
+#checkout input{
+  width:100%;
+  margin:8px 0;
+  padding:10px;
+}
+
+/* SWITCH */
+.switch{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  background:white;
+  color:black;
+  padding:8px 12px;
+  border-radius:999px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">APPLE MINIMAL</div>
+
+  <input placeholder="Search..." oninput="search(this.value)">
+
+  <div onclick="toggleCart()">🛒 <span id="count">0</span></div>
+</header>
+
+<div class="hero">
+  <h1>Minimal Store</h1>
+  <p>Apple-style UI</p>
+</div>
+
+<div class="categories">
+  <div class="cat" onclick="setCat('all')">All</div>
+  <div class="cat" onclick="setCat('phones')">Phones</div>
+  <div class="cat" onclick="setCat('laptops')">Laptops</div>
+  <div class="cat" onclick="setCat('audio')">Audio</div>
+</div>
+
+<div class="products" id="products"></div>
+
+<!-- CART -->
+<div class="cart" id="cart">
+  <h3>Cart</h3>
+  <div id="cartItems"></div>
+
+  <div class="cart-footer">
+    <button class="btn" onclick="goCheckout()">Оплатити</button>
+  </div>
+</div>
+
+<!-- CHECKOUT -->
+<div id="checkout">
+  <h2>Checkout</h2>
+
+  <input placeholder="Name">
+  <input placeholder="Address">
+  <input placeholder="Card number">
+  <input placeholder="CVV">
+
+  <button class="btn" onclick="pay()">Confirm Payment</button>
+</div>
+
+<div class="switch" onclick="toggleMode()">Snow / Rain</div>
+
+<script>
+let mode="snow";
+
+let cats=["phones","laptops","audio"];
+let products=[];
+let cart=[];
+
+for(let i=0;i<50;i++){
+  products.push({
+    id:i,
+    name:"Product "+(i+1),
+    price:Math.floor(Math.random()*300)+50,
+    img:`https://picsum.photos/seed/${i}/400/300`, // исправлено
+    cat:cats[i%3]
+  });
+}
+
+/* RENDER */
+function render(list=products){
+  let box=document.getElementById("products");
+  box.innerHTML="";
+  list.forEach(p=>{
+    box.innerHTML+=`
+      <div class="card">
+        <img src="${p.img}">
+        <div class="card-content">
+          <h3>${p.name}</h3>
+          <div>${p.cat}</div>
+          <div class="price">$${p.price}</div>
+          <button class="btn" onclick="add(${p.id})">Add</button>
+        </div>
+      </div>
+    `;
+  });
+}
+render();
+
+/* SEARCH */
+function search(t){
+  render(products.filter(p=>p.name.toLowerCase().includes(t.toLowerCase())));
+}
+
+/* CATEGORY */
+function setCat(c){
+  if(c==="all") render();
+  else render(products.filter(p=>p.cat===c));
+}
+
+/* CART */
+function add(id){
+  cart.push(products.find(p=>p.id===id));
+  update();
+}
+
+function update(){
+  document.getElementById("count").innerText=cart.length;
+
+  let box=document.getElementById("cartItems");
+  box.innerHTML="";
+
+  cart.forEach(item=>{
+    box.innerHTML+=`
+      <div class="item">
+        <span>${item.name}</span>
+        <span>$${item.price}</span>
+      </div>
+    `;
+  });
+}
+
+function toggleCart(){
+  document.getElementById("cart").classList.toggle("active");
+}
+
+/* CHECKOUT */
+function goCheckout(){
+  document.getElementById("checkout").scrollIntoView({behavior:"smooth"});
+}
+
+function pay(){
+  if(cart.length===0){
+    alert("Cart empty");
+    return;
+  }
+
+  alert("Payment successful ✔");
+  cart=[];
+  update();
+  toggleCart();
+}
+
+/* FALLING EFFECT */
+function createParticle(){
+  const el=document.createElement("div");
+  el.className="particle";
+
+  el.innerHTML = mode==="snow" ? "❄" : "💧";
+  el.style.left=Math.random()*100+"vw";
+  el.style.fontSize=(Math.random()*10+8)+"px";
+  el.style.animationDuration=(Math.random()*5+5)+"s";
+
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),10000);
+}
+
+setInterval(createParticle,120);
+
+/* SWITCH */
+function toggleMode(){
+  mode = mode==="snow" ? "rain" : "snow";
+}
+</script>
+
+</body>
+</html>
